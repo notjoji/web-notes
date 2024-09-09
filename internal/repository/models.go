@@ -9,13 +9,13 @@ import (
 )
 
 type Note struct {
-	ID          int64            `db:"id" json:"id"`
-	UserID      int64            `db:"user_id" json:"user_id"`
-	Name        string           `db:"name" json:"name"`
-	Description *string          `db:"description" json:"description"`
-	IsCompleted bool             `db:"is_completed" json:"is_completed"`
-	CreatedAt   pgtype.Timestamp `db:"created_at" json:"created_at"`
-	DeadlineAt  pgtype.Timestamp `db:"deadline_at" json:"deadline_at"`
+	ID          int64       `db:"id" json:"id"`
+	UserID      int64       `db:"user_id" json:"user_id"`
+	Name        string      `db:"name" json:"name"`
+	Description *string     `db:"description" json:"description"`
+	IsCompleted bool        `db:"is_completed" json:"is_completed"`
+	CreatedAt   pgtype.Date `db:"created_at" json:"created_at"`
+	DeadlineAt  pgtype.Date `db:"deadline_at" json:"deadline_at"`
 }
 
 type User struct {

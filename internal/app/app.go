@@ -28,6 +28,61 @@ type PageData struct {
 	Message string
 }
 
+type NoteType string
+
+const (
+	Active    NoteType = "В работе"
+	Completed          = "Завершено"
+	Expired            = "Просрочено"
+)
+
+type NoteTypeClass string
+
+const (
+	Default NoteTypeClass = "text-white bg-primary"
+	Success               = "text-white bg-success"
+	Danger                = "text-white bg-danger"
+)
+
+type NoteDTO struct {
+	ID          int64         `json:"id"`
+	UserID      int64         `json:"user_id"`
+	Name        string        `json:"name"`
+	Description *string       `json:"description"`
+	CreatedAt   string        `json:"created_at"`
+	Type        NoteType      `json:"type"`
+	TypeClass   NoteTypeClass `json:"type_class"`
+}
+
+const (
+	layoutISO = "2006-01-02"
+	layoutUS  = "January 2, 2006"
+)
+
+func MapNote(note *repository.Note) *NoteDTO {
+	var noteType NoteType
+	var noteTypeClass NoteTypeClass
+	if note.IsCompleted {
+		noteType = Completed
+		noteTypeClass = Success
+	} else if note.DeadlineAt.Valid && time.Now().After(note.DeadlineAt.Time) {
+		noteType = Expired
+		noteTypeClass = Danger
+	} else {
+		noteType = Active
+		noteTypeClass = Default
+	}
+	return &NoteDTO{
+		ID:          note.ID,
+		UserID:      note.UserID,
+		Name:        note.Name,
+		Description: note.Description,
+		CreatedAt:   note.CreatedAt.Time.Format("2006-01-02"),
+		Type:        noteType,
+		TypeClass:   noteTypeClass,
+	}
+}
+
 func (a App) Routes(r *httprouter.Router) {
 	r.ServeFiles("/public/*filepath", http.Dir("public"))
 	r.GET("/", a.AuthNeeded(a.ShowNotesPage))
@@ -156,7 +211,7 @@ func (a App) ShowNotesPage(rw http.ResponseWriter, _ *http.Request, p httprouter
 		return
 	}
 
-	filePath := filepath.Join("public", "html", "notes.html")
+	filePath := filepath.Join("public", "html", "main.html")
 
 	tmpl, err := template.ParseFiles(filePath)
 	if err != nil {
@@ -165,11 +220,15 @@ func (a App) ShowNotesPage(rw http.ResponseWriter, _ *http.Request, p httprouter
 	}
 
 	type NotesPageData struct {
-		Notes []*repository.Note
+		Notes []*NoteDTO
 	}
-	data := NotesPageData{notes}
+	dtos := make([]*NoteDTO, len(notes))
+	for i, _ := range notes {
+		dtos[i] = MapNote(notes[i])
+	}
+	data := NotesPageData{dtos}
 
-	err = tmpl.ExecuteTemplate(rw, "notes", data)
+	err = tmpl.ExecuteTemplate(rw, "main", data)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return

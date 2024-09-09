@@ -18,10 +18,10 @@ RETURNING id
 `
 
 type CreateNoteParams struct {
-	UserID      int64            `db:"user_id" json:"user_id"`
-	Name        string           `db:"name" json:"name"`
-	Description *string          `db:"description" json:"description"`
-	DeadlineAt  pgtype.Timestamp `db:"deadline_at" json:"deadline_at"`
+	UserID      int64       `db:"user_id" json:"user_id"`
+	Name        string      `db:"name" json:"name"`
+	Description *string     `db:"description" json:"description"`
+	DeadlineAt  pgtype.Date `db:"deadline_at" json:"deadline_at"`
 }
 
 func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) (int64, error) {
@@ -146,11 +146,11 @@ RETURNING id
 `
 
 type UpdateNoteParams struct {
-	Name        string           `db:"name" json:"name"`
-	Description *string          `db:"description" json:"description"`
-	IsCompleted bool             `db:"is_completed" json:"is_completed"`
-	DeadlineAt  pgtype.Timestamp `db:"deadline_at" json:"deadline_at"`
-	ID          int64            `db:"id" json:"id"`
+	Name        string      `db:"name" json:"name"`
+	Description *string     `db:"description" json:"description"`
+	IsCompleted bool        `db:"is_completed" json:"is_completed"`
+	DeadlineAt  pgtype.Date `db:"deadline_at" json:"deadline_at"`
+	ID          int64       `db:"id" json:"id"`
 }
 
 func (q *Queries) UpdateNote(ctx context.Context, arg UpdateNoteParams) (int64, error) {

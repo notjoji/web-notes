@@ -1,29 +1,38 @@
 {{define "login"}}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login page</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 </head>
 <body>
-
-<form id="loginForm" name="loginForm" action="/login" method="post" class="mt-4">
-    <label for="login">Логин</label><br>
-    <input type="login" id="login" name="login" autocomplete="on"><br>
-    <label for="password">Пароль</label><br>
-    <input type="password" id="password" name="password" autocomplete="on"><br>
-    <br>
-    <button type="submit" name="submitBtn">Войти</button>
-</form>
-
-{{if . }}
-<div>
-    {{.Message}}
+<div class="container bg-light bg-gradient">
+    <form id="loginForm" name="loginForm" action="/login" method="post" class="mt-4 pt-4">
+        <div class="mb-3">
+            <label for="login" class="form-label">Логин</label>
+            <input type="login" id="login" name="login" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label for="password" class="form-label">Пароль</label>
+            <input type="password" id="password" name="password" class="form-control" aria-describedby="input-error">
+            {{if . }}
+            <div id="input-error" class="form-text">{{.Message}}</div>
+            {{end}}
+        </div>
+        <button type="submit" name="submitBtn" class="btn btn-primary">Войти</button>
+    </form>
+    <div class="mt-4 pb-4">
+        <a href="/register">Зарегистрироваться</a>
+    </div>
 </div>
-{{end}}
 
-<br>
-<a href="/register">Зарегистрироваться</a>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
 </body>
 </html>
 {{end}}

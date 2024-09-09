@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS notes
     name         VARCHAR(50) NOT NULL,
     description  VARCHAR(255),
     is_completed BOOLEAN     NOT NULL DEFAULT 'FALSE',
-    created_at   TIMESTAMP   NOT NULL DEFAULT NOW(),
-    deadline_at  TIMESTAMP,
+    created_at   DATE        NOT NULL DEFAULT NOW()::DATE,
+    deadline_at  DATE,
     CONSTRAINT notes_to_users_id_fk FOREIGN KEY (user_id)
         REFERENCES users (id)
         ON DELETE CASCADE
