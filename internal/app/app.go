@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgtype"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -85,7 +86,7 @@ func MapNote(note *repository.Note) *NoteDTO {
 
 func (a App) Routes(r *httprouter.Router) {
 	r.ServeFiles("/public/*filepath", http.Dir("public"))
-	r.GET("/", a.AuthNeeded(a.ShowNotesPage))
+	r.GET("/", a.AuthNeeded(a.ShowMainPage))
 	r.GET("/login", func(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		a.ShowLoginPage(rw, "")
 	})
@@ -95,6 +96,8 @@ func (a App) Routes(r *httprouter.Router) {
 		a.ShowRegisterPage(rw, "")
 	})
 	r.POST("/register", a.Register)
+	r.GET("/notes", a.AuthNeeded(a.ShowCreateNotePage))
+	r.POST("/notes", a.AuthNeeded(a.CreatNewNote))
 }
 
 func (a App) ShowLoginPage(rw http.ResponseWriter, message string) {
@@ -166,7 +169,7 @@ func (a App) ShowRegisterPage(rw http.ResponseWriter, message string) {
 	}
 }
 
-func (a App) ShowNotesPage(rw http.ResponseWriter, _ *http.Request, p httprouter.Params) {
+func (a App) ShowMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.Params) {
 	limit := int64(5)
 	offset := int64(0)
 	var userID int64
@@ -235,6 +238,25 @@ func (a App) ShowNotesPage(rw http.ResponseWriter, _ *http.Request, p httprouter
 	}
 }
 
+func (a App) ShowCreateNotePage(rw http.ResponseWriter, _ *http.Request, p httprouter.Params) {
+	filePath := filepath.Join("public", "html", "createNote.html")
+
+	tmpl, err := template.ParseFiles(filePath)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	message := p.ByName("message")
+	data := PageData{message}
+
+	err = tmpl.ExecuteTemplate(rw, "createNote", data)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
 func (a App) AuthNeeded(next httprouter.Handle) httprouter.Handle {
 	return func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		token, err := utils.ReadCookie(Token, r)
@@ -280,6 +302,62 @@ func (a App) Register(rw http.ResponseWriter, r *http.Request, p httprouter.Para
 	}
 
 	a.ShowLoginPage(rw, "Регистрация успешна!")
+}
+
+func (a App) CreatNewNote(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	noteName := strings.TrimSpace(r.FormValue("noteName"))
+	noteDesc := strings.TrimSpace(r.FormValue("noteDesc"))
+	hasDeadline := r.FormValue("deadlineDateCheckbox") == "on"
+	deadline := strings.TrimSpace(r.FormValue("deadlineDatePicker"))
+
+	if noteName == "" || noteDesc == "" {
+		p = append(p, httprouter.Param{Key: "message", Value: "Название и описание заметки не должны быть пустыми!"})
+		a.ShowCreateNotePage(rw, r, p)
+		return
+	}
+
+	if hasDeadline && deadline == "" {
+		p = append(p, httprouter.Param{Key: "message", Value: "Укажите дату дедлайна!"})
+		a.ShowCreateNotePage(rw, r, p)
+		return
+	}
+
+	var userID int64
+	var err error
+	userIDParam := p.ByName("userID")
+	if userIDParam == "" {
+		http.Error(rw, "требуется параметр 'userID'", http.StatusBadRequest)
+		return
+	} else {
+		userID, err = strconv.ParseInt(userIDParam, 10, 64)
+		if err != nil {
+			http.Error(rw, "параметр 'userID' невалидный", http.StatusBadRequest)
+			return
+		}
+	}
+
+	params := repository.CreateNoteParams{
+		UserID:      userID,
+		Name:        noteName,
+		Description: &noteDesc,
+	}
+	if hasDeadline {
+		parsedDeadline, _ := time.Parse(layoutISO, deadline)
+		params.DeadlineAt = pgtype.Date{
+			Time:             parsedDeadline,
+			InfinityModifier: 0,
+			Valid:            true,
+		}
+	}
+
+	_, err = a.db.CreateNote(a.ctx, params)
+	if err != nil {
+		p = append(p, httprouter.Param{Key: "message", Value: "Возникла ошибка при создании заметки!"})
+		a.ShowCreateNotePage(rw, r, p)
+		return
+	}
+
+	http.Redirect(rw, r, "/", http.StatusSeeOther)
 }
 
 func NewApp(ctx context.Context, db *repository.Queries) *App {
