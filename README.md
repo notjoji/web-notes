@@ -1,6 +1,6 @@
 # Веб-приложение "Заметки"
 
-![example workflow](https://github.com/github/docs/actions/workflows/main.yml/badge.svg)
+![Build badge](https://github.com/notjoji/web-notes/actions/workflows/main.yml/badge.svg)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/notjoji/web-notes)](https://goreportcard.com/report/github.com/notjoji/web-notes)
 
