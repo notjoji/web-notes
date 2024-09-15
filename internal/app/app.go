@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5/pgtype"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -55,6 +56,30 @@ type NoteDTO struct {
 	TypeClass   NoteTypeClass `json:"type_class"`
 }
 
+type NoteUpdateDTO struct {
+	ID          int64   `json:"id"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+	HasDeadline bool    `json:"has_deadline"`
+	Deadline    string  `json:"deadline"`
+	IsCompleted bool    `json:"is_completed"`
+}
+
+func MapNoteUpdate(note *repository.Note) *NoteUpdateDTO {
+	deadline := ""
+	if note.DeadlineAt.Valid {
+		deadline = note.DeadlineAt.Time.Format(layoutISO)
+	}
+	return &NoteUpdateDTO{
+		ID:          note.ID,
+		Name:        note.Name,
+		Description: note.Description,
+		HasDeadline: note.DeadlineAt.Valid,
+		Deadline:    deadline,
+		IsCompleted: note.IsCompleted,
+	}
+}
+
 const (
 	layoutISO = "2006-01-02"
 	layoutUS  = "January 2, 2006"
@@ -78,7 +103,7 @@ func MapNote(note *repository.Note) *NoteDTO {
 		UserID:      note.UserID,
 		Name:        note.Name,
 		Description: note.Description,
-		CreatedAt:   note.CreatedAt.Time.Format("2006-01-02"),
+		CreatedAt:   note.CreatedAt.Time.Format(layoutISO),
 		Type:        noteType,
 		TypeClass:   noteTypeClass,
 	}
@@ -97,7 +122,10 @@ func (a App) Routes(r *httprouter.Router) {
 	})
 	r.POST("/register", a.Register)
 	r.GET("/notes", a.AuthNeeded(a.ShowCreateNotePage))
-	r.POST("/notes", a.AuthNeeded(a.CreatNewNote))
+	r.POST("/notes", a.AuthNeeded(a.CreateNewNote))
+	r.GET("/notes/:page", a.AuthNeeded(a.ShowUpdateNotePage))
+	r.POST("/search", a.AuthNeeded(a.PaginationMainPage))
+	r.POST("/update", a.AuthNeeded(a.UpdateNote))
 }
 
 func (a App) ShowLoginPage(rw http.ResponseWriter, message string) {
@@ -169,8 +197,17 @@ func (a App) ShowRegisterPage(rw http.ResponseWriter, message string) {
 	}
 }
 
+func (a App) PaginationMainPage(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	x := r.RequestURI
+	log.Println(x)
+}
+
+func (a App) FilterMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.Params) {
+
+}
+
 func (a App) ShowMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.Params) {
-	limit := int64(5)
+	limit := int64(6)
 	offset := int64(0)
 	var userID int64
 	var err error
@@ -236,6 +273,100 @@ func (a App) ShowMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
+}
+
+func (a App) ShowUpdateNotePage(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	var noteID int64
+	var err error
+	idParam := strings.TrimPrefix(r.URL.Path, "/notes/")
+
+	if idParam != "" {
+		noteID, err = strconv.ParseInt(idParam, 10, 64)
+		if err != nil {
+			http.Error(rw, "параметр 'id' невалидный", http.StatusBadRequest)
+			return
+		}
+	}
+
+	note, err := a.db.GetNoteById(a.ctx, noteID)
+
+	message := p.ByName("message")
+	type UpdateNotePageData struct {
+		Message string
+		Note    *NoteUpdateDTO
+	}
+
+	data := UpdateNotePageData{message, MapNoteUpdate(note)}
+
+	filePath := filepath.Join("public", "html", "updateNote.html")
+
+	tmpl, err := template.ParseFiles(filePath)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = tmpl.ExecuteTemplate(rw, "updateNote", data)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+func (a App) UpdateNote(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	noteIDParam := strings.TrimSpace(r.FormValue("noteID"))
+	noteName := strings.TrimSpace(r.FormValue("noteName"))
+	noteDesc := strings.TrimSpace(r.FormValue("noteDesc"))
+	hasDeadline := r.FormValue("deadlineDateCheckbox") == "on"
+	deadline := strings.TrimSpace(r.FormValue("deadlineDatePicker"))
+	isCompleted := r.FormValue("completedCheckbox") == "on"
+
+	if noteName == "" || noteDesc == "" {
+		p = append(p, httprouter.Param{Key: "message", Value: "Название и описание заметки не должны быть пустыми!"})
+		r.URL.Path = "/notes/" + noteIDParam
+		a.ShowUpdateNotePage(rw, r, p)
+		return
+	}
+
+	if hasDeadline && deadline == "" {
+		p = append(p, httprouter.Param{Key: "message", Value: "Укажите дату дедлайна!"})
+		r.URL.Path = "/notes/" + noteIDParam
+		a.ShowUpdateNotePage(rw, r, p)
+		return
+	}
+
+	var noteID int64
+	var err error
+	noteID, err = strconv.ParseInt(noteIDParam, 10, 64)
+	if err != nil {
+		http.Error(rw, "параметр 'noteID' невалидный", http.StatusBadRequest)
+		return
+	}
+
+	params := repository.UpdateNoteParams{
+		Name:        noteName,
+		Description: &noteDesc,
+		IsCompleted: isCompleted,
+		ID:          noteID,
+	}
+
+	if hasDeadline {
+		parsedDeadline, _ := time.Parse(layoutISO, deadline)
+		params.DeadlineAt = pgtype.Date{
+			Time:             parsedDeadline,
+			InfinityModifier: 0,
+			Valid:            true,
+		}
+	}
+
+	_, err = a.db.UpdateNote(a.ctx, params)
+	if err != nil {
+		p = append(p, httprouter.Param{Key: "message", Value: "Возникла ошибка при обновлении заметки!"})
+		a.ShowCreateNotePage(rw, r, p)
+		return
+	}
+
+	http.Redirect(rw, r, "/", http.StatusSeeOther)
 }
 
 func (a App) ShowCreateNotePage(rw http.ResponseWriter, _ *http.Request, p httprouter.Params) {
@@ -304,7 +435,7 @@ func (a App) Register(rw http.ResponseWriter, r *http.Request, p httprouter.Para
 	a.ShowLoginPage(rw, "Регистрация успешна!")
 }
 
-func (a App) CreatNewNote(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (a App) CreateNewNote(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	noteName := strings.TrimSpace(r.FormValue("noteName"))
 	noteDesc := strings.TrimSpace(r.FormValue("noteDesc"))
 	hasDeadline := r.FormValue("deadlineDateCheckbox") == "on"

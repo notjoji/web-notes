@@ -79,7 +79,7 @@ const GetPageableNotesByUserId = `-- name: GetPageableNotesByUserId :many
 SELECT n.id, n.user_id, n.name, n.description, n.is_completed, n.created_at, n.deadline_at
 FROM notes n
 WHERE user_id = $1
-ORDER BY n.id
+ORDER BY n.created_at
 LIMIT $2 OFFSET $3
 `
 

@@ -2,7 +2,7 @@
 SELECT n.*
 FROM notes n
 WHERE user_id = $1
-ORDER BY n.id
+ORDER BY n.created_at
 LIMIT $2 OFFSET $3;
 
 -- name: GetNoteById :one

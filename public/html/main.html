@@ -10,21 +10,35 @@
           integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 </head>
 <body>
+
+
 <div class="container bg-light bg-gradient">
-    <div class="mt-4 pt-4">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <form class="d-flex">
+                <input class="form-control me-4" type="search" placeholder="Поиск..." aria-label="Search">
+                <button class="btn btn-outline-success" type="submit" action="/search" method="post">Применить</button>
+            </form>
+            <a href="/logout" class="btn btn-dark">Выйти</a>
+        </div>
+    </nav>
+
+    <div class="mt-4">
         <a href="/notes" class="btn btn-primary">Создать новую заметку</a>
     </div>
-    {{range $note := .Notes }}
-    <div class="card mt-4 {{$note.TypeClass}}">
-        <div class="card-header">{{$note.Type}}</div>
-        <div class="card-body">
-            <h5 class="card-title">{{$note.Name}}</h5>
-            <p class="card-text">{{$note.Description}}</p>
-            <p class="card-text"><small>Дата создания: {{$note.CreatedAt}}</small></p>
-            <a href="/notes/{{$note.ID}}}" class="btn btn-light text-dark">Подробнее</a>
+    <div class="row row-cols-1 row-cols-md-2">
+        {{range $note := .Notes }}
+        <div class="card mt-4 {{$note.TypeClass}}" style="width: 25.5rem; margin-left: 1rem; margin-right: 1rem">
+            <div class="card-header">{{$note.Type}}</div>
+            <div class="card-body">
+                <h5 class="card-title">{{$note.Name}}</h5>
+                <p class="card-text">{{$note.Description}}</p>
+                <p class="card-text"><small>Дата создания: {{$note.CreatedAt}}</small></p>
+                <a href="/notes/{{$note.ID}}" class="btn btn-light text-dark">Подробнее</a>
+            </div>
         </div>
+        {{end}}
     </div>
-    {{end}}
     <div class="mt-4 pb-4">
 
     </div>
