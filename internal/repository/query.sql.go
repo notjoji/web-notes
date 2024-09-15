@@ -54,6 +54,19 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 	return id, err
 }
 
+const DeleteNoteById = `-- name: DeleteNoteById :one
+DELETE
+FROM notes
+WHERE id = $1
+RETURNING id
+`
+
+func (q *Queries) DeleteNoteById(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRow(ctx, DeleteNoteById, id)
+	err := row.Scan(&id)
+	return id, err
+}
+
 const GetNoteById = `-- name: GetNoteById :one
 SELECT DISTINCT n.id, n.user_id, n.name, n.description, n.is_completed, n.created_at, n.deadline_at
 FROM notes n
@@ -75,22 +88,15 @@ func (q *Queries) GetNoteById(ctx context.Context, id int64) (*Note, error) {
 	return &i, err
 }
 
-const GetPageableNotesByUserId = `-- name: GetPageableNotesByUserId :many
+const GetNotesByUserId = `-- name: GetNotesByUserId :many
 SELECT n.id, n.user_id, n.name, n.description, n.is_completed, n.created_at, n.deadline_at
 FROM notes n
 WHERE user_id = $1
 ORDER BY n.created_at
-LIMIT $2 OFFSET $3
 `
 
-type GetPageableNotesByUserIdParams struct {
-	UserID int64 `db:"user_id" json:"user_id"`
-	Limit  int32 `db:"limit" json:"limit"`
-	Offset int32 `db:"offset" json:"offset"`
-}
-
-func (q *Queries) GetPageableNotesByUserId(ctx context.Context, arg GetPageableNotesByUserIdParams) ([]*Note, error) {
-	rows, err := q.db.Query(ctx, GetPageableNotesByUserId, arg.UserID, arg.Limit, arg.Offset)
+func (q *Queries) GetNotesByUserId(ctx context.Context, userID int64) ([]*Note, error) {
+	rows, err := q.db.Query(ctx, GetNotesByUserId, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +126,8 @@ func (q *Queries) GetPageableNotesByUserId(ctx context.Context, arg GetPageableN
 const GetUserByLoginAndPassword = `-- name: GetUserByLoginAndPassword :one
 SELECT DISTINCT u.id, u.login, u.password
 FROM users u
-WHERE u.login = $1 AND u.password = $2
+WHERE u.login = $1
+  AND u.password = $2
 `
 
 type GetUserByLoginAndPasswordParams struct {

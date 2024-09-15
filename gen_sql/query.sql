@@ -1,9 +1,8 @@
--- name: GetPageableNotesByUserId :many
+-- name: GetNotesByUserId :many
 SELECT n.*
 FROM notes n
 WHERE user_id = $1
-ORDER BY n.created_at
-LIMIT $2 OFFSET $3;
+ORDER BY n.created_at;
 
 -- name: GetNoteById :one
 SELECT DISTINCT n.*
@@ -24,10 +23,17 @@ SET name         = $1,
 WHERE id = $5
 RETURNING id;
 
+-- name: DeleteNoteById :one
+DELETE
+FROM notes
+WHERE id = $1
+RETURNING id;
+
 -- name: GetUserByLoginAndPassword :one
 SELECT DISTINCT u.*
 FROM users u
-WHERE u.login = $1 AND u.password = $2;
+WHERE u.login = $1
+  AND u.password = $2;
 
 -- name: CreateUser :one
 INSERT INTO users (login, password)

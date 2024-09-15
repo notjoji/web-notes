@@ -34,12 +34,25 @@
                 <h5 class="card-title">{{$note.Name}}</h5>
                 <p class="card-text">{{$note.Description}}</p>
                 <p class="card-text"><small>Дата создания: {{$note.CreatedAt}}</small></p>
-                <a href="/notes/{{$note.ID}}" class="btn btn-light text-dark">Подробнее</a>
+                <div class="row">
+                    <div class="col-sm">
+                        <a href="/notes/{{$note.ID}}" class="btn btn-outline-light d-block">Подробнее</a>
+                    </div>
+                    <div class="col-sm">
+                        <form id="deleteNoteForm{{$note.ID}}" name="deleteNoteForm" action="/delete/{{$note.ID}}"
+                              method="post">
+                            <button type="submit" name="submitBtn" class="btn btn-outline-warning block"
+                                    style="width: 100%">Удалить
+                            </button>
+                        </form>
+
+                    </div>
+                </div>
             </div>
         </div>
         {{end}}
     </div>
-    <div class="mt-4 pb-4">
+    <div class="pb-4">
 
     </div>
 </div>

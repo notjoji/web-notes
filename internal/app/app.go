@@ -126,6 +126,7 @@ func (a App) Routes(r *httprouter.Router) {
 	r.GET("/notes/:page", a.AuthNeeded(a.ShowUpdateNotePage))
 	r.POST("/search", a.AuthNeeded(a.PaginationMainPage))
 	r.POST("/update", a.AuthNeeded(a.UpdateNote))
+	r.POST("/delete/:id", a.AuthNeeded(a.DeleteNote))
 }
 
 func (a App) ShowLoginPage(rw http.ResponseWriter, message string) {
@@ -207,8 +208,8 @@ func (a App) FilterMainPage(rw http.ResponseWriter, _ *http.Request, p httproute
 }
 
 func (a App) ShowMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.Params) {
-	limit := int64(6)
-	offset := int64(0)
+	//limit := int64(6)
+	//offset := int64(0)
 	var userID int64
 	var err error
 
@@ -224,28 +225,24 @@ func (a App) ShowMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.
 		}
 	}
 
-	limitParam := p.ByName("limit")
-	offsetParam := p.ByName("offset")
-	if limitParam != "" {
-		limit, err = strconv.ParseInt(limitParam, 10, 64)
-		if err != nil {
-			http.Error(rw, "параметр 'limit' невалидный", http.StatusBadRequest)
-			return
-		}
-	}
-	if offsetParam != "" {
-		offset, err = strconv.ParseInt(offsetParam, 10, 64)
-		if err != nil {
-			http.Error(rw, "параметр 'offset' невалидный", http.StatusBadRequest)
-			return
-		}
-	}
+	//limitParam := p.ByName("limit")
+	//offsetParam := p.ByName("offset")
+	//if limitParam != "" {
+	//	limit, err = strconv.ParseInt(limitParam, 10, 64)
+	//	if err != nil {
+	//		http.Error(rw, "параметр 'limit' невалидный", http.StatusBadRequest)
+	//		return
+	//	}
+	//}
+	//if offsetParam != "" {
+	//	offset, err = strconv.ParseInt(offsetParam, 10, 64)
+	//	if err != nil {
+	//		http.Error(rw, "параметр 'offset' невалидный", http.StatusBadRequest)
+	//		return
+	//	}
+	//}
 
-	notes, err := a.db.GetPageableNotesByUserId(a.ctx, repository.GetPageableNotesByUserIdParams{
-		UserID: userID,
-		Limit:  int32(limit),
-		Offset: int32(offset),
-	})
+	notes, err := a.db.GetNotesByUserId(a.ctx, userID)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
@@ -260,13 +257,15 @@ func (a App) ShowMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.
 	}
 
 	type NotesPageData struct {
-		Notes []*NoteDTO
+		Message string
+		Notes   []*NoteDTO
 	}
 	dtos := make([]*NoteDTO, len(notes))
 	for i, _ := range notes {
 		dtos[i] = MapNote(notes[i])
 	}
-	data := NotesPageData{dtos}
+	message := p.ByName("message")
+	data := NotesPageData{message, dtos}
 
 	err = tmpl.ExecuteTemplate(rw, "main", data)
 	if err != nil {
@@ -363,6 +362,29 @@ func (a App) UpdateNote(rw http.ResponseWriter, r *http.Request, p httprouter.Pa
 	if err != nil {
 		p = append(p, httprouter.Param{Key: "message", Value: "Возникла ошибка при обновлении заметки!"})
 		a.ShowCreateNotePage(rw, r, p)
+		return
+	}
+
+	http.Redirect(rw, r, "/", http.StatusSeeOther)
+}
+
+func (a App) DeleteNote(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	var noteID int64
+	var err error
+	idParam := strings.TrimPrefix(r.URL.Path, "/delete/")
+
+	if idParam != "" {
+		noteID, err = strconv.ParseInt(idParam, 10, 64)
+		if err != nil {
+			http.Error(rw, "параметр 'id' невалидный", http.StatusBadRequest)
+			return
+		}
+	}
+
+	_, err = a.db.DeleteNoteById(a.ctx, noteID)
+	if err != nil {
+		p = append(p, httprouter.Param{Key: "message", Value: "Возникла ошибка при удалении заметки!"})
+		a.ShowMainPage(rw, r, p)
 		return
 	}
 

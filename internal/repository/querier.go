@@ -11,8 +11,9 @@ import (
 type Querier interface {
 	CreateNote(ctx context.Context, arg CreateNoteParams) (int64, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
+	DeleteNoteById(ctx context.Context, id int64) (int64, error)
 	GetNoteById(ctx context.Context, id int64) (*Note, error)
-	GetPageableNotesByUserId(ctx context.Context, arg GetPageableNotesByUserIdParams) ([]*Note, error)
+	GetNotesByUserId(ctx context.Context, userID int64) ([]*Note, error)
 	GetUserByLoginAndPassword(ctx context.Context, arg GetUserByLoginAndPasswordParams) (*User, error)
 	UpdateNote(ctx context.Context, arg UpdateNoteParams) (int64, error)
 }
