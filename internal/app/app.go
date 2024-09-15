@@ -73,6 +73,12 @@ type NoteUpdateDTO struct {
 	IsCompleted bool    `json:"is_completed"`
 }
 
+type NoteCreateDTO struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Deadline    string `json:"deadline"`
+}
+
 func MapNoteUpdate(note *repository.Note) *NoteUpdateDTO {
 	deadline := ""
 	if note.DeadlineAt.Valid {
@@ -444,7 +450,14 @@ func (a App) ShowCreateNotePage(rw http.ResponseWriter, _ *http.Request, p httpr
 	}
 
 	message := p.ByName("message")
-	data := PageData{message}
+	noteName := p.ByName("noteName")
+	noteDesc := p.ByName("noteDesc")
+	deadline := p.ByName("deadline")
+	type CreateNotePageData struct {
+		Message string
+		Note    *NoteCreateDTO
+	}
+	data := CreateNotePageData{Message: message, Note: &NoteCreateDTO{noteName, noteDesc, deadline}}
 
 	err = tmpl.ExecuteTemplate(rw, "createNote", data)
 	if err != nil {
@@ -508,12 +521,17 @@ func (a App) CreateNewNote(rw http.ResponseWriter, r *http.Request, p httprouter
 
 	if noteName == "" || noteDesc == "" {
 		p = append(p, httprouter.Param{Key: "message", Value: "Название и описание заметки не должны быть пустыми!"})
+		p = append(p, httprouter.Param{Key: "noteName", Value: noteName})
+		p = append(p, httprouter.Param{Key: "noteDesc", Value: noteDesc})
+		p = append(p, httprouter.Param{Key: "deadline", Value: deadline})
 		a.ShowCreateNotePage(rw, r, p)
 		return
 	}
 
 	if hasDeadline && deadline == "" {
 		p = append(p, httprouter.Param{Key: "message", Value: "Укажите дату дедлайна!"})
+		p = append(p, httprouter.Param{Key: "noteName", Value: noteName})
+		p = append(p, httprouter.Param{Key: "noteDesc", Value: noteDesc})
 		a.ShowCreateNotePage(rw, r, p)
 		return
 	}

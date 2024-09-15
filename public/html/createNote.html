@@ -29,7 +29,7 @@
                 <input type="date" id="deadlineDatePicker" name="deadlineDatePicker">
             </div>
         </div>
-        {{if . }}
+        {{if .Message }}
         <div id="input-error" class="form-text mb-3">{{.Message}}</div>
         {{end}}
         <button type="submit" name="submitBtn" class="btn btn-primary">Создать</button>
@@ -43,5 +43,17 @@
         integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
         crossorigin="anonymous"></script>
 </body>
+<script>
+    if ("{{.Note.Name}}" !== "") {
+        document.getElementById("noteName").value = "{{.Note.Name}}";
+    }
+    if ("{{.Note.Description}}" !== "") {
+        document.getElementById("noteDesc").value = "{{.Note.Description}}";
+    }
+    if ("{{.Note.Deadline}}" !== "") {
+        document.getElementById("deadlineDateCheckbox").click()
+        document.getElementById("deadlineDatePicker").value = "{{.Note.Deadline}}";
+    }
+</script>
 </html>
 {{end}}
