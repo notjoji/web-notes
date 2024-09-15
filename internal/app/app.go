@@ -148,17 +148,21 @@ func (a App) Routes(r *httprouter.Router) {
 	r.POST("/changeStatus", a.AuthNeeded(a.ChangeStatusNote))
 }
 
-func (a App) ShowLoginPage(rw http.ResponseWriter, message string) {
-	filePath := filepath.Join("public", "html", "login.html")
+func ParseTemplateFiles(rw http.ResponseWriter, html string) *template.Template {
+	filePath := filepath.Join("public", "html", html)
 
 	tmpl, err := template.ParseFiles(filePath)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
+		return nil
 	}
-	data := PageData{message}
+	return tmpl
+}
 
-	err = tmpl.ExecuteTemplate(rw, "login", data)
+func (a App) ShowLoginPage(rw http.ResponseWriter, message string) {
+	tmpl := ParseTemplateFiles(rw, "login.html")
+	data := PageData{message}
+	err := tmpl.ExecuteTemplate(rw, "login", data)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
@@ -200,17 +204,9 @@ func (a App) Logout(rw http.ResponseWriter, r *http.Request, _ httprouter.Params
 }
 
 func (a App) ShowRegisterPage(rw http.ResponseWriter, message string) {
-	filePath := filepath.Join("public", "html", "register.html")
-
-	tmpl, err := template.ParseFiles(filePath)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
+	tmpl := ParseTemplateFiles(rw, "register.html")
 	data := PageData{message}
-
-	err = tmpl.ExecuteTemplate(rw, "register", data)
+	err := tmpl.ExecuteTemplate(rw, "register", data)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
@@ -267,14 +263,7 @@ func (a App) ShowMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.
 		return
 	}
 
-	filePath := filepath.Join("public", "html", "main.html")
-
-	tmpl, err := template.ParseFiles(filePath)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
+	tmpl := ParseTemplateFiles(rw, "main.html")
 	type NotesPageData struct {
 		Message string
 		Notes   []*NoteDTO
@@ -308,21 +297,13 @@ func (a App) ShowUpdateNotePage(rw http.ResponseWriter, r *http.Request, p httpr
 
 	note, err := a.db.GetNoteById(a.ctx, noteID)
 
+	tmpl := ParseTemplateFiles(rw, "updateNote.html")
 	message := p.ByName("message")
 	type UpdateNotePageData struct {
 		Message string
 		Note    *NoteUpdateDTO
 	}
-
 	data := UpdateNotePageData{message, MapNoteUpdate(note)}
-
-	filePath := filepath.Join("public", "html", "updateNote.html")
-
-	tmpl, err := template.ParseFiles(filePath)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	err = tmpl.ExecuteTemplate(rw, "updateNote", data)
 	if err != nil {
@@ -441,13 +422,7 @@ func (a App) ChangeStatusNote(rw http.ResponseWriter, r *http.Request, p httprou
 }
 
 func (a App) ShowCreateNotePage(rw http.ResponseWriter, _ *http.Request, p httprouter.Params) {
-	filePath := filepath.Join("public", "html", "createNote.html")
-
-	tmpl, err := template.ParseFiles(filePath)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
+	tmpl := ParseTemplateFiles(rw, "createNote.html")
 
 	message := p.ByName("message")
 	noteName := p.ByName("noteName")
@@ -459,7 +434,7 @@ func (a App) ShowCreateNotePage(rw http.ResponseWriter, _ *http.Request, p httpr
 	}
 	data := CreateNotePageData{Message: message, Note: &NoteCreateDTO{noteName, noteDesc, deadline}}
 
-	err = tmpl.ExecuteTemplate(rw, "createNote", data)
+	err := tmpl.ExecuteTemplate(rw, "createNote", data)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
