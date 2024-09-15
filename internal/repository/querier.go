@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	ChangeNoteStatus(ctx context.Context, arg ChangeNoteStatusParams) (int64, error)
 	CreateNote(ctx context.Context, arg CreateNoteParams) (int64, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
 	DeleteNoteById(ctx context.Context, id int64) (int64, error)

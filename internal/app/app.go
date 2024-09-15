@@ -46,14 +46,22 @@ const (
 	Danger                = "text-white bg-danger"
 )
 
+type StatusChangeTo string
+
+const (
+	ToActive    StatusChangeTo = "Вернуть в работу"
+	ToCompleted                = "Завершить"
+)
+
 type NoteDTO struct {
-	ID          int64         `json:"id"`
-	UserID      int64         `json:"user_id"`
-	Name        string        `json:"name"`
-	Description *string       `json:"description"`
-	CreatedAt   string        `json:"created_at"`
-	Type        NoteType      `json:"type"`
-	TypeClass   NoteTypeClass `json:"type_class"`
+	ID             int64          `json:"id"`
+	UserID         int64          `json:"user_id"`
+	Name           string         `json:"name"`
+	Description    *string        `json:"description"`
+	CreatedAt      string         `json:"created_at"`
+	Type           NoteType       `json:"type"`
+	TypeClass      NoteTypeClass  `json:"type_class"`
+	StatusChangeTo StatusChangeTo `json:"status_change_to"`
 }
 
 type NoteUpdateDTO struct {
@@ -82,30 +90,34 @@ func MapNoteUpdate(note *repository.Note) *NoteUpdateDTO {
 
 const (
 	layoutISO = "2006-01-02"
-	layoutUS  = "January 2, 2006"
 )
 
 func MapNote(note *repository.Note) *NoteDTO {
 	var noteType NoteType
 	var noteTypeClass NoteTypeClass
+	var statusChangeTo StatusChangeTo
 	if note.IsCompleted {
 		noteType = Completed
 		noteTypeClass = Success
+		statusChangeTo = ToActive
 	} else if note.DeadlineAt.Valid && time.Now().After(note.DeadlineAt.Time) {
 		noteType = Expired
 		noteTypeClass = Danger
+		statusChangeTo = ToCompleted
 	} else {
 		noteType = Active
 		noteTypeClass = Default
+		statusChangeTo = ToCompleted
 	}
 	return &NoteDTO{
-		ID:          note.ID,
-		UserID:      note.UserID,
-		Name:        note.Name,
-		Description: note.Description,
-		CreatedAt:   note.CreatedAt.Time.Format(layoutISO),
-		Type:        noteType,
-		TypeClass:   noteTypeClass,
+		ID:             note.ID,
+		UserID:         note.UserID,
+		Name:           note.Name,
+		Description:    note.Description,
+		CreatedAt:      note.CreatedAt.Time.Format(layoutISO),
+		Type:           noteType,
+		TypeClass:      noteTypeClass,
+		StatusChangeTo: statusChangeTo,
 	}
 }
 
@@ -127,6 +139,7 @@ func (a App) Routes(r *httprouter.Router) {
 	r.POST("/search", a.AuthNeeded(a.PaginationMainPage))
 	r.POST("/update", a.AuthNeeded(a.UpdateNote))
 	r.POST("/delete/:id", a.AuthNeeded(a.DeleteNote))
+	r.POST("/changeStatus", a.AuthNeeded(a.ChangeStatusNote))
 }
 
 func (a App) ShowLoginPage(rw http.ResponseWriter, message string) {
@@ -146,7 +159,7 @@ func (a App) ShowLoginPage(rw http.ResponseWriter, message string) {
 	}
 }
 
-func (a App) Login(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (a App) Login(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	login := r.FormValue("login")
 	password := r.FormValue("password")
 
@@ -261,7 +274,7 @@ func (a App) ShowMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.
 		Notes   []*NoteDTO
 	}
 	dtos := make([]*NoteDTO, len(notes))
-	for i, _ := range notes {
+	for i := range notes {
 		dtos[i] = MapNote(notes[i])
 	}
 	message := p.ByName("message")
@@ -391,6 +404,36 @@ func (a App) DeleteNote(rw http.ResponseWriter, r *http.Request, p httprouter.Pa
 	http.Redirect(rw, r, "/", http.StatusSeeOther)
 }
 
+func (a App) ChangeStatusNote(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	noteIDParam := strings.TrimSpace(r.FormValue("noteID"))
+	noteChangeStatusToParam := strings.TrimSpace(r.FormValue("statusChangeTo"))
+
+	var noteID int64
+	var err error
+	noteID, err = strconv.ParseInt(noteIDParam, 10, 64)
+	if err != nil {
+		http.Error(rw, "параметр 'noteID' невалидный", http.StatusBadRequest)
+		return
+	}
+
+	isCompleted := false
+	if noteChangeStatusToParam == ToCompleted {
+		isCompleted = true
+	}
+
+	_, err = a.db.ChangeNoteStatus(a.ctx, repository.ChangeNoteStatusParams{
+		IsCompleted: isCompleted,
+		ID:          noteID,
+	})
+	if err != nil {
+		p = append(p, httprouter.Param{Key: "message", Value: "Возникла ошибка при изменении статуса заметки!"})
+		a.ShowMainPage(rw, r, p)
+		return
+	}
+
+	http.Redirect(rw, r, "/", http.StatusSeeOther)
+}
+
 func (a App) ShowCreateNotePage(rw http.ResponseWriter, _ *http.Request, p httprouter.Params) {
 	filePath := filepath.Join("public", "html", "createNote.html")
 
@@ -430,7 +473,7 @@ func (a App) AuthNeeded(next httprouter.Handle) httprouter.Handle {
 	}
 }
 
-func (a App) Register(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func (a App) Register(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	login := strings.TrimSpace(r.FormValue("login"))
 	password := strings.TrimSpace(r.FormValue("password"))
 	confirmPassword := strings.TrimSpace(r.FormValue("confirmPassword"))

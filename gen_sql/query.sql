@@ -29,6 +29,12 @@ FROM notes
 WHERE id = $1
 RETURNING id;
 
+-- name: ChangeNoteStatus :one
+UPDATE notes
+SET is_completed = $1
+WHERE id = $2
+RETURNING id;
+
 -- name: GetUserByLoginAndPassword :one
 SELECT DISTINCT u.*
 FROM users u

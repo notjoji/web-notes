@@ -11,6 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const ChangeNoteStatus = `-- name: ChangeNoteStatus :one
+UPDATE notes
+SET is_completed = $1
+WHERE id = $2
+RETURNING id
+`
+
+type ChangeNoteStatusParams struct {
+	IsCompleted bool  `db:"is_completed" json:"is_completed"`
+	ID          int64 `db:"id" json:"id"`
+}
+
+func (q *Queries) ChangeNoteStatus(ctx context.Context, arg ChangeNoteStatusParams) (int64, error) {
+	row := q.db.QueryRow(ctx, ChangeNoteStatus, arg.IsCompleted, arg.ID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const CreateNote = `-- name: CreateNote :one
 INSERT INTO notes (user_id, name, description, deadline_at)
 VALUES ($1, $2, $3, $4)
