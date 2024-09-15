@@ -1,5 +1,9 @@
 # Веб-приложение "Заметки"
 
+![example workflow](https://github.com/github/docs/actions/workflows/main.yml/badge.svg)
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/notjoji/web-notes)](https://goreportcard.com/report/github.com/notjoji/web-notes)
+
 ### Описание: 
 В этом проекте студентам предлагается создать веб-приложение для управления заметками пользователей. Приложение должно позволять пользователям создавать, просматривать, обновлять и удалять заметки. Также можно добавить функционал для добавления тегов к заметкам или возможность установки срока давности для каждой заметки.
 
