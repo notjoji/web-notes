@@ -2,11 +2,11 @@ CREATE TABLE IF NOT EXISTS users
 (
     id       BIGSERIAL   NOT NULL PRIMARY KEY,
     login    VARCHAR(20) NOT NULL,
-    password VARCHAR(50) NOT NULL
+    password VARCHAR(128) NOT NULL
 );
 
 INSERT INTO users (login, password)
-VALUES ('1', 'c4ca4238a0b923820dcc509a6f75849b');
+VALUES ('123', 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3');
 
 CREATE TABLE IF NOT EXISTS notes
 (

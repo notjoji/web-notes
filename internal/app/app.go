@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgtype"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -12,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/julienschmidt/httprouter"
 	"github.com/notjoji/web-notes/internal/repository"
 	"github.com/notjoji/web-notes/internal/utils"
@@ -33,43 +33,43 @@ type NoteType string
 
 const (
 	Active    NoteType = "В работе"
-	Completed          = "Завершено"
-	Expired            = "Просрочено"
+	Completed NoteType = "Завершено"
+	Expired   NoteType = "Просрочено"
 )
 
 type NoteTypeClass string
 
 const (
 	Default NoteTypeClass = "text-white bg-primary"
-	Success               = "text-white bg-success"
-	Danger                = "text-white bg-danger"
+	Success NoteTypeClass = "text-white bg-success"
+	Danger  NoteTypeClass = "text-white bg-danger"
 )
 
 type StatusChangeTo string
 
 const (
 	ToActive    StatusChangeTo = "Вернуть в работу"
-	ToCompleted                = "Завершить"
+	ToCompleted StatusChangeTo = "Завершить"
 )
 
 type NoteDTO struct {
 	ID             int64          `json:"id"`
-	UserID         int64          `json:"user_id"`
+	UserID         int64          `json:"userId"`
 	Name           string         `json:"name"`
 	Description    *string        `json:"description"`
-	CreatedAt      string         `json:"created_at"`
+	CreatedAt      string         `json:"createdAt"`
 	Type           NoteType       `json:"type"`
-	TypeClass      NoteTypeClass  `json:"type_class"`
-	StatusChangeTo StatusChangeTo `json:"status_change_to"`
+	TypeClass      NoteTypeClass  `json:"typeClass"`
+	StatusChangeTo StatusChangeTo `json:"statusChangeTo"`
 }
 
 type NoteUpdateDTO struct {
 	ID          int64   `json:"id"`
 	Name        string  `json:"name"`
 	Description *string `json:"description"`
-	HasDeadline bool    `json:"has_deadline"`
+	HasDeadline bool    `json:"hasDeadline"`
 	Deadline    string  `json:"deadline"`
-	IsCompleted bool    `json:"is_completed"`
+	IsCompleted bool    `json:"isCompleted"`
 }
 
 type NoteCreateDTO struct {
@@ -101,18 +101,22 @@ func MapNote(note *repository.Note) *NoteDTO {
 	var noteType NoteType
 	var noteTypeClass NoteTypeClass
 	var statusChangeTo StatusChangeTo
-	if note.IsCompleted {
+	switch note.IsCompleted {
+	case true:
 		noteType = Completed
 		noteTypeClass = Success
 		statusChangeTo = ToActive
-	} else if note.DeadlineAt.Valid && time.Now().After(note.DeadlineAt.Time.Add(24*time.Hour)) {
-		noteType = Expired
-		noteTypeClass = Danger
-		statusChangeTo = ToCompleted
-	} else {
-		noteType = Active
-		noteTypeClass = Default
-		statusChangeTo = ToCompleted
+	case false:
+		switch note.DeadlineAt.Valid && time.Now().After(note.DeadlineAt.Time.Add(24*time.Hour)) {
+		case true:
+			noteType = Expired
+			noteTypeClass = Danger
+			statusChangeTo = ToCompleted
+		case false:
+			noteType = Active
+			noteTypeClass = Default
+			statusChangeTo = ToCompleted
+		}
 	}
 	return &NoteDTO{
 		ID:             note.ID,
@@ -129,12 +133,12 @@ func MapNote(note *repository.Note) *NoteDTO {
 func (a App) Routes(r *httprouter.Router) {
 	r.ServeFiles("/public/*filepath", http.Dir("public"))
 	r.GET("/", a.AuthNeeded(a.ShowMainPage))
-	r.GET("/login", func(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	r.GET("/login", func(rw http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 		a.ShowLoginPage(rw, "")
 	})
 	r.POST("/login", a.Login)
 	r.GET("/logout", a.Logout)
-	r.GET("/register", func(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	r.GET("/register", func(rw http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 		a.ShowRegisterPage(rw, "")
 	})
 	r.POST("/register", a.Register)
@@ -176,8 +180,10 @@ func (a App) Login(rw http.ResponseWriter, r *http.Request, _ httprouter.Params)
 		a.ShowLoginPage(rw, "Необходимо указать логин и пароль!")
 		return
 	}
-	user, err := a.db.GetUserByLoginAndPassword(a.ctx, repository.GetUserByLoginAndPasswordParams{Login: login,
-		Password: utils.GetHashedString(password)})
+	user, err := a.db.GetUserByLoginAndPassword(a.ctx, repository.GetUserByLoginAndPasswordParams{
+		Login:    login,
+		Password: utils.GetHashedString(password),
+	})
 	if err != nil {
 		a.ShowLoginPage(rw, "Вы ввели неверный логин или пароль!")
 		return
@@ -233,12 +239,11 @@ func (a App) ShowMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.
 	if userIDParam == "" {
 		http.Error(rw, "требуется параметр 'userID'", http.StatusBadRequest)
 		return
-	} else {
-		userID, err = strconv.ParseInt(userIDParam, 10, 64)
-		if err != nil {
-			http.Error(rw, "параметр 'userID' невалидный", http.StatusBadRequest)
-			return
-		}
+	}
+	userID, err = strconv.ParseInt(userIDParam, 10, 64)
+	if err != nil {
+		http.Error(rw, "параметр 'userID' невалидный", http.StatusBadRequest)
+		return
 	}
 
 	var notes []*repository.Note
@@ -289,7 +294,7 @@ func (a App) ShowUpdateNotePage(rw http.ResponseWriter, r *http.Request, p httpr
 		}
 	}
 
-	note, err := a.db.GetNoteById(a.ctx, noteID)
+	note, _ := a.db.GetNoteById(a.ctx, noteID)
 
 	tmpl := ParseTemplateFiles(rw, "updateNote.html")
 	message := p.ByName("message")
@@ -398,7 +403,7 @@ func (a App) ChangeStatusNote(rw http.ResponseWriter, r *http.Request, p httprou
 	}
 
 	isCompleted := false
-	if noteChangeStatusToParam == ToCompleted {
+	if noteChangeStatusToParam == "Завершить" {
 		isCompleted = true
 	}
 
@@ -511,12 +516,11 @@ func (a App) CreateNewNote(rw http.ResponseWriter, r *http.Request, p httprouter
 	if userIDParam == "" {
 		http.Error(rw, "требуется параметр 'userID'", http.StatusBadRequest)
 		return
-	} else {
-		userID, err = strconv.ParseInt(userIDParam, 10, 64)
-		if err != nil {
-			http.Error(rw, "параметр 'userID' невалидный", http.StatusBadRequest)
-			return
-		}
+	}
+	userID, err = strconv.ParseInt(userIDParam, 10, 64)
+	if err != nil {
+		http.Error(rw, "параметр 'userID' невалидный", http.StatusBadRequest)
+		return
 	}
 
 	params := repository.CreateNoteParams{

@@ -1,14 +1,15 @@
 package utils
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
-	"github.com/notjoji/web-notes/internal/repository"
-	"github.com/pkg/errors"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/notjoji/web-notes/internal/repository"
+	"github.com/pkg/errors"
 )
 
 func ReadCookie(name string, r *http.Request) (value string, err error) {
@@ -31,6 +32,7 @@ func GetAuthToken(user *repository.User) string {
 }
 
 func GetHashedString(str string) string {
-	hash := md5.Sum([]byte(str))
-	return hex.EncodeToString(hash[:])
+	h := sha256.New()
+	h.Write([]byte(str))
+	return hex.EncodeToString(h.Sum(nil))
 }
