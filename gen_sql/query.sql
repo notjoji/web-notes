@@ -45,3 +45,10 @@ WHERE u.login = $1
 INSERT INTO users (login, password)
 VALUES ($1, $2)
 RETURNING id;
+
+-- name: GetNotesByUserIdAndSearch :many
+SELECT n.*
+FROM notes n
+WHERE user_id = $1
+  AND (name ILIKE '%' || $2 || '%')
+ORDER BY n.created_at;

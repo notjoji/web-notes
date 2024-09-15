@@ -15,6 +15,7 @@ type Querier interface {
 	DeleteNoteById(ctx context.Context, id int64) (int64, error)
 	GetNoteById(ctx context.Context, id int64) (*Note, error)
 	GetNotesByUserId(ctx context.Context, userID int64) ([]*Note, error)
+	GetNotesByUserIdAndSearch(ctx context.Context, arg GetNotesByUserIdAndSearchParams) ([]*Note, error)
 	GetUserByLoginAndPassword(ctx context.Context, arg GetUserByLoginAndPasswordParams) (*User, error)
 	UpdateNote(ctx context.Context, arg UpdateNoteParams) (int64, error)
 }

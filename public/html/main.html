@@ -13,17 +13,21 @@
 <div class="container bg-light bg-gradient">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
-            <form class="d-flex" action="/search" method="post">
-                <input class="form-control me-4" type="search" placeholder="Поиск..." aria-label="Search">
-                <button class="btn btn-outline-success" type="submit">Применить</button>
-            </form>
+            <div class="d-block" style="width: 100%; margin-right: 1rem">
+                <form class="d-flex" action="/search" method="post">
+                    <input class="form-control me-4" type="search" placeholder="Частичный поиск по названию..."
+                           aria-label="Search" name="search">
+                    <button class="btn btn-outline-success" type="submit">Применить</button>
+                </form>
+            </div>
             <a href="/logout" class="btn btn-dark">Выйти</a>
         </div>
     </nav>
 
-    <div class="mt-4">
-        <a href="/notes" class="btn btn-primary">Создать новую заметку</a>
+    <div class="m-4">
+        <a href="/notes" class="btn btn-lg btn-primary">Создать новую заметку</a>
     </div>
+    {{if .Notes}}
     <div class="row row-cols-1 row-cols-md-2">
         {{range $note := .Notes }}
         <div class="card mt-4 {{$note.TypeClass}}" style="width: 25.5rem; margin-left: 1rem; margin-right: 1rem">
@@ -62,6 +66,11 @@
         </div>
         {{end}}
     </div>
+    {{else}}
+    <div class="row mt-4">
+        <h3>Заметок не нашлось</h3>
+    </div>
+    {{end}}
     <div class="pb-4">
 
     </div>

@@ -142,6 +142,47 @@ func (q *Queries) GetNotesByUserId(ctx context.Context, userID int64) ([]*Note, 
 	return items, nil
 }
 
+const GetNotesByUserIdAndSearch = `-- name: GetNotesByUserIdAndSearch :many
+SELECT n.id, n.user_id, n.name, n.description, n.is_completed, n.created_at, n.deadline_at
+FROM notes n
+WHERE user_id = $1
+  AND (name ILIKE '%' || $2 || '%')
+ORDER BY n.created_at
+`
+
+type GetNotesByUserIdAndSearchParams struct {
+	UserID  int64   `db:"user_id" json:"user_id"`
+	Column2 *string `db:"column_2" json:"column_2"`
+}
+
+func (q *Queries) GetNotesByUserIdAndSearch(ctx context.Context, arg GetNotesByUserIdAndSearchParams) ([]*Note, error) {
+	rows, err := q.db.Query(ctx, GetNotesByUserIdAndSearch, arg.UserID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*Note{}
+	for rows.Next() {
+		var i Note
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Description,
+			&i.IsCompleted,
+			&i.CreatedAt,
+			&i.DeadlineAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const GetUserByLoginAndPassword = `-- name: GetUserByLoginAndPassword :one
 SELECT DISTINCT u.id, u.login, u.password
 FROM users u

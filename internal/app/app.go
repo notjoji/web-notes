@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5/pgtype"
 	"html/template"
-	"log"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -106,7 +105,7 @@ func MapNote(note *repository.Note) *NoteDTO {
 		noteType = Completed
 		noteTypeClass = Success
 		statusChangeTo = ToActive
-	} else if note.DeadlineAt.Valid && time.Now().After(note.DeadlineAt.Time) {
+	} else if note.DeadlineAt.Valid && time.Now().After(note.DeadlineAt.Time.Add(24*time.Hour)) {
 		noteType = Expired
 		noteTypeClass = Danger
 		statusChangeTo = ToCompleted
@@ -142,7 +141,7 @@ func (a App) Routes(r *httprouter.Router) {
 	r.GET("/notes", a.AuthNeeded(a.ShowCreateNotePage))
 	r.POST("/notes", a.AuthNeeded(a.CreateNewNote))
 	r.GET("/notes/:page", a.AuthNeeded(a.ShowUpdateNotePage))
-	r.POST("/search", a.AuthNeeded(a.PaginationMainPage))
+	r.POST("/search", a.AuthNeeded(a.FilterNotes))
 	r.POST("/update", a.AuthNeeded(a.UpdateNote))
 	r.POST("/delete/:id", a.AuthNeeded(a.DeleteNote))
 	r.POST("/changeStatus", a.AuthNeeded(a.ChangeStatusNote))
@@ -213,18 +212,20 @@ func (a App) ShowRegisterPage(rw http.ResponseWriter, message string) {
 	}
 }
 
-func (a App) PaginationMainPage(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	x := r.RequestURI
-	log.Println(x)
-}
+func (a App) FilterNotes(rw http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	search := strings.TrimSpace(r.FormValue("search"))
 
-func (a App) FilterMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.Params) {
+	if search == "" {
+		p = append(p, httprouter.Param{Key: "message", Value: "Для поиска заметки требуется ввести значение!"})
+		a.ShowMainPage(rw, r, p)
+		return
+	}
 
+	p = append(p, httprouter.Param{Key: "search", Value: search})
+	a.ShowMainPage(rw, r, p)
 }
 
 func (a App) ShowMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.Params) {
-	//limit := int64(6)
-	//offset := int64(0)
 	var userID int64
 	var err error
 
@@ -240,24 +241,17 @@ func (a App) ShowMainPage(rw http.ResponseWriter, _ *http.Request, p httprouter.
 		}
 	}
 
-	//limitParam := p.ByName("limit")
-	//offsetParam := p.ByName("offset")
-	//if limitParam != "" {
-	//	limit, err = strconv.ParseInt(limitParam, 10, 64)
-	//	if err != nil {
-	//		http.Error(rw, "параметр 'limit' невалидный", http.StatusBadRequest)
-	//		return
-	//	}
-	//}
-	//if offsetParam != "" {
-	//	offset, err = strconv.ParseInt(offsetParam, 10, 64)
-	//	if err != nil {
-	//		http.Error(rw, "параметр 'offset' невалидный", http.StatusBadRequest)
-	//		return
-	//	}
-	//}
+	var notes []*repository.Note
+	search := p.ByName("search")
+	if search != "" {
+		notes, err = a.db.GetNotesByUserIdAndSearch(a.ctx, repository.GetNotesByUserIdAndSearchParams{
+			UserID:  userID,
+			Column2: &search,
+		})
+	} else {
+		notes, err = a.db.GetNotesByUserId(a.ctx, userID)
+	}
 
-	notes, err := a.db.GetNotesByUserId(a.ctx, userID)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
