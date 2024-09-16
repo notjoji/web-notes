@@ -2,7 +2,7 @@
 SELECT n.*
 FROM notes n
 WHERE user_id = $1
-ORDER BY n.created_at;
+ORDER BY n.created_at, n.id;
 
 -- name: GetNoteById :one
 SELECT DISTINCT n.*
@@ -51,4 +51,4 @@ SELECT n.*
 FROM notes n
 WHERE user_id = $1
   AND (name ILIKE '%' || $2 || '%')
-ORDER BY n.created_at;
+ORDER BY n.created_at, n.id;

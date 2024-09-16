@@ -111,7 +111,7 @@ const GetNotesByUserId = `-- name: GetNotesByUserId :many
 SELECT n.id, n.user_id, n.name, n.description, n.is_completed, n.created_at, n.deadline_at
 FROM notes n
 WHERE user_id = $1
-ORDER BY n.created_at
+ORDER BY n.created_at, n.id
 `
 
 func (q *Queries) GetNotesByUserId(ctx context.Context, userID int64) ([]*Note, error) {
@@ -147,7 +147,7 @@ SELECT n.id, n.user_id, n.name, n.description, n.is_completed, n.created_at, n.d
 FROM notes n
 WHERE user_id = $1
   AND (name ILIKE '%' || $2 || '%')
-ORDER BY n.created_at
+ORDER BY n.created_at, n.id
 `
 
 type GetNotesByUserIdAndSearchParams struct {

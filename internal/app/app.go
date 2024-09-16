@@ -133,6 +133,7 @@ func MapNote(note *repository.Note) *NoteDTO {
 func (a App) Routes(r *httprouter.Router) {
 	r.ServeFiles("/public/*filepath", http.Dir("public"))
 	r.GET("/", a.AuthNeeded(a.ShowMainPage))
+	r.POST("/", a.AuthNeeded(a.FilterNotes))
 	r.GET("/login", func(rw http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 		a.ShowLoginPage(rw, "")
 	})
@@ -145,7 +146,6 @@ func (a App) Routes(r *httprouter.Router) {
 	r.GET("/notes", a.AuthNeeded(a.ShowCreateNotePage))
 	r.POST("/notes", a.AuthNeeded(a.CreateNewNote))
 	r.GET("/notes/:page", a.AuthNeeded(a.ShowUpdateNotePage))
-	r.POST("/search", a.AuthNeeded(a.FilterNotes))
 	r.POST("/update", a.AuthNeeded(a.UpdateNote))
 	r.POST("/delete/:id", a.AuthNeeded(a.DeleteNote))
 	r.POST("/changeStatus", a.AuthNeeded(a.ChangeStatusNote))
