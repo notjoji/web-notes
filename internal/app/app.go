@@ -56,7 +56,7 @@ type NoteDTO struct {
 	ID             int64          `json:"id"`
 	UserID         int64          `json:"userId"`
 	Name           string         `json:"name"`
-	Description    *string        `json:"description"`
+	Description    string         `json:"description"`
 	CreatedAt      string         `json:"createdAt"`
 	Type           NoteType       `json:"type"`
 	TypeClass      NoteTypeClass  `json:"typeClass"`
@@ -64,12 +64,12 @@ type NoteDTO struct {
 }
 
 type NoteUpdateDTO struct {
-	ID          int64   `json:"id"`
-	Name        string  `json:"name"`
-	Description *string `json:"description"`
-	HasDeadline bool    `json:"hasDeadline"`
-	Deadline    string  `json:"deadline"`
-	IsCompleted bool    `json:"isCompleted"`
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	HasDeadline bool   `json:"hasDeadline"`
+	Deadline    string `json:"deadline"`
+	IsCompleted bool   `json:"isCompleted"`
 }
 
 type NoteCreateDTO struct {
@@ -86,7 +86,7 @@ func MapNoteUpdate(note *repository.Note) *NoteUpdateDTO {
 	return &NoteUpdateDTO{
 		ID:          note.ID,
 		Name:        note.Name,
-		Description: note.Description,
+		Description: *note.Description,
 		HasDeadline: note.DeadlineAt.Valid,
 		Deadline:    deadline,
 		IsCompleted: note.IsCompleted,
@@ -122,7 +122,7 @@ func MapNote(note *repository.Note) *NoteDTO {
 		ID:             note.ID,
 		UserID:         note.UserID,
 		Name:           note.Name,
-		Description:    note.Description,
+		Description:    *note.Description,
 		CreatedAt:      note.CreatedAt.Time.Format(layoutISO),
 		Type:           noteType,
 		TypeClass:      noteTypeClass,
